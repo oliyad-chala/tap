@@ -104,11 +104,15 @@ export function ContactForm() {
     setSubmitStatus("idle")
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
 
-      // Simulate random success/failure for demo
-      if (Math.random() > 0.2) {
+      if (response.ok) {
         setSubmitStatus("success")
         setFormData({
           name: "",
@@ -119,7 +123,7 @@ export function ContactForm() {
           message: "",
         })
       } else {
-        setSubmitStatus("error")
+        throw new Error("Failed to send message")
       }
     } catch (error) {
       setSubmitStatus("error")
