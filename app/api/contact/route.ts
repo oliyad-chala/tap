@@ -3,8 +3,8 @@ import { Resend } from "resend"
 
 export async function POST(request: Request) {
   try {
-    const resend = new Resend(process.env.RESEND_API_KEY)
-    const toEmail = process.env.CONTACT_EMAIL
+    const resend = new Resend('re_Ph1Qu4PQ_5EZZfY6UyjD1SADzXpWdb2j5')
+    const toEmail = 'oliyadchl@gmail.com'
     const { name, email, subject, message, company, phone } = await request.json()
 
     // Basic server-side validation
