@@ -1,9 +1,9 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
+import { useForm, type SubmitHandler } from "react-hook-form"
 import { motion } from "framer-motion"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -19,88 +19,19 @@ interface FormData {
   message: string
 }
 
-interface FormErrors {
-  name?: string
-  email?: string
-  phone?: string
-  subject?: string
-  message?: string
-}
-
 export function ContactForm() {
-  const [formData, setFormData] = useState<FormData>({
-    name: "",
-    email: "",
-    phone: "",
-    company: "",
-    subject: "",
-    message: "",
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<FormData>({
+    mode: "onBlur",
   })
 
-  const [errors, setErrors] = useState<FormErrors>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
 
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {}
-
-    // Name validation
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required"
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = "Name must be at least 2 characters"
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required"
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address"
-    }
-
-    // Phone validation (optional but if provided, should be valid)
-    if (formData.phone.trim()) {
-      const phoneRegex = /^[+]?[1-9][\d]{0,15}$/
-      if (!phoneRegex.test(formData.phone.replace(/[\s\-$$$$]/g, ""))) {
-        newErrors.phone = "Please enter a valid phone number"
-      }
-    }
-
-    // Subject validation
-    if (!formData.subject.trim()) {
-      newErrors.subject = "Subject is required"
-    } else if (formData.subject.trim().length < 5) {
-      newErrors.subject = "Subject must be at least 5 characters"
-    }
-
-    // Message validation
-    if (!formData.message.trim()) {
-      newErrors.message = "Message is required"
-    } else if (formData.message.trim().length < 10) {
-      newErrors.message = "Message must be at least 10 characters"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleInputChange = (field: keyof FormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }))
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!validateForm()) {
-      return
-    }
-
-    setIsSubmitting(true)
+  const onSubmit: SubmitHandler<FormData> = async (data) => {
     setSubmitStatus("idle")
 
     try {
@@ -109,26 +40,17 @@ export function ContactForm() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(data),
       })
 
       if (response.ok) {
         setSubmitStatus("success")
-        setFormData({
-          name: "",
-          email: "",
-          phone: "",
-          company: "",
-          subject: "",
-          message: "",
-        })
+        reset()
       } else {
         throw new Error("Failed to send message")
       }
     } catch (error) {
       setSubmitStatus("error")
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
@@ -206,7 +128,7 @@ export function ContactForm() {
         transition={{ duration: 0.8 }}
         viewport={{ once: true }}
       >
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Success Message */}
           {submitStatus === "success" && (
             <motion.div
@@ -244,16 +166,21 @@ export function ContactForm() {
               <Input
                 id="name"
                 type="text"
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
+                {...register("name", {
+                  required: "Name is required",
+                  minLength: {
+                    value: 2,
+                    message: "Name must be at least 2 characters",
+                  },
+                })}
                 className={`${
-                  errors.name
+                  errors.name?.message
                     ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                     : "border-gray-300 dark:border-gray-600"
                 }`}
                 placeholder="Enter your full name"
               />
-              {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+              {errors.name && <p className="text-red-500 text-sm">{errors.name.message}</p>}
             </div>
 
             {/* Email Field */}
@@ -264,16 +191,21 @@ export function ContactForm() {
               <Input
                 id="email"
                 type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
+                {...register("email", {
+                  required: "Email is required",
+                  pattern: {
+                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                    message: "Please enter a valid email address",
+                  },
+                })}
                 className={`${
-                  errors.email
+                  errors.email?.message
                     ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                     : "border-gray-300 dark:border-gray-600"
                 }`}
                 placeholder="Enter your email address"
               />
-              {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
+              {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
             </div>
           </div>
 
@@ -286,16 +218,20 @@ export function ContactForm() {
               <Input
                 id="phone"
                 type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange("phone", e.target.value)}
+                {...register("phone", {
+                  pattern: {
+                    value: /^[+]?[1-9][\d]{0,15}$/,
+                    message: "Please enter a valid phone number",
+                  },
+                })}
                 className={`${
-                  errors.phone
+                  errors.phone?.message
                     ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                     : "border-gray-300 dark:border-gray-600"
                 }`}
                 placeholder="Enter your phone number"
               />
-              {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
+              {errors.phone && <p className="text-red-500 text-sm">{errors.phone.message}</p>}
             </div>
 
             {/* Company Field */}
@@ -306,8 +242,7 @@ export function ContactForm() {
               <Input
                 id="company"
                 type="text"
-                value={formData.company}
-                onChange={(e) => handleInputChange("company", e.target.value)}
+                {...register("company")}
                 className="border-gray-300 dark:border-gray-600"
                 placeholder="Enter your company name"
               />
@@ -322,16 +257,21 @@ export function ContactForm() {
             <Input
               id="subject"
               type="text"
-              value={formData.subject}
-              onChange={(e) => handleInputChange("subject", e.target.value)}
+              {...register("subject", {
+                required: "Subject is required",
+                minLength: {
+                  value: 5,
+                  message: "Subject must be at least 5 characters",
+                },
+              })}
               className={`${
-                errors.subject
+                errors.subject?.message
                   ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                   : "border-gray-300 dark:border-gray-600"
               }`}
               placeholder="What's this about?"
             />
-            {errors.subject && <p className="text-red-500 text-sm">{errors.subject}</p>}
+            {errors.subject && <p className="text-red-500 text-sm">{errors.subject.message}</p>}
           </div>
 
           {/* Message Field */}
@@ -341,16 +281,21 @@ export function ContactForm() {
             </Label>
             <Textarea
               id="message"
-              value={formData.message}
-              onChange={(e) => handleInputChange("message", e.target.value)}
+              {...register("message", {
+                required: "Message is required",
+                minLength: {
+                  value: 10,
+                  message: "Message must be at least 10 characters",
+                },
+              })}
               className={`min-h-[120px] ${
-                errors.message
+                errors.message?.message
                   ? "border-red-500 focus:border-red-500 focus:ring-red-500"
                   : "border-gray-300 dark:border-gray-600"
               }`}
               placeholder="Tell us more about your inquiry..."
             />
-            {errors.message && <p className="text-red-500 text-sm">{errors.message}</p>}
+            {errors.message && <p className="text-red-500 text-sm">{errors.message.message}</p>}
           </div>
 
           {/* Submit Button */}
